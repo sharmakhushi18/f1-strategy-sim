@@ -1,0 +1,9 @@
+fastf1>=3.3
+pandas
+numpy
+scipy
+statsmodels
+plotly
+streamlit
+pytest
+requests
