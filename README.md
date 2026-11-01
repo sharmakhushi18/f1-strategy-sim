@@ -5,15 +5,15 @@ A Monte Carlo model that answers one strategy question:
 > *"If I pit in N laps, what is the probability I come out ahead of the car in front,
 > given tyre wear, pit-stop variance, Safety Car risk and traffic?"*
 
-Python + SQL pipeline: **FastF1 → SQLite → calibration (regression) → Monte Carlo → Streamlit**.
+Python + SQL pipeline: **Jolpica-F1 (or FastF1) → SQLite → calibration (regression) → Monte Carlo → Streamlit**.
 
 ## How it works
 
 | Stage | File | What it does |
 |---|---|---|
-| Ingest | `src/ingest.py` | Loads laps, tyre life, compound, pit flags, track status, weather, position from FastF1 into SQLite |
+| Ingest | `src/ingest_jolpica.py`, `src/ingest.py` | Loads laps, positions and pit stops into SQLite (Jolpica-F1, free); FastF1 version adds compound, track status and weather |
 | Analysis | `sql/*.sql` | Clean-lap view, degradation curves, pit stops (window functions), gap to car ahead (self-join) |
-| Calibration | `src/tyre_model.py` | Fuel-corrected tyre degradation per compound (joint OLS with driver fixed effects), pit loss, Safety Car rate |
+| Calibration | `src/tyre_model.py` | Fuel-corrected tyre degradation (joint OLS with driver fixed effects; per compound with FastF1, one pooled curve with Jolpica), pit loss (median/MAD), Safety Car rate |
 | Simulation | `src/simulator.py` | Vectorised Monte Carlo: pit-time variance, slow stops, Safety Car, traffic re-entry, rival cover delay |
 | Validation | `src/backtest.py` | Replays real undercut situations; compares model probability with outcome (accuracy, Brier score vs base-rate baseline) |
 | UI | `app.py` | Streamlit: live probability, outcome distribution, success heatmap, tyre model, backtest |
@@ -31,10 +31,10 @@ python -m venv venv && source venv/bin/activate      # Windows: venv\Scripts\act
 pip install -r requirements.txt
 # Option A (free, no login): Jolpica-F1 -> laps, positions, pit stops (no tyre compound)
 python src/ingest_jolpica.py --list 2023             # find round numbers
-python src/ingest_jolpica.py 2023 15                 # repeat for more rounds
+python src/ingest_jolpica.py 2023 14                 # round 14 = Italian GP (Monza); repeat for more rounds
 # Option B (needs an F1TV Access account since Oct 2026): FastF1 -> adds compound, track status, weather
 python src/ingest.py 2023 Monza
-python src/tyre_model.py 2023_Monza                  # fitted parameters
+python src/tyre_model.py "2023_Italian Grand Prix"    # fitted parameters (race id = <year>_<race name>)
 python src/backtest.py                               # validation
 streamlit run app.py
 pytest                                               # tests
